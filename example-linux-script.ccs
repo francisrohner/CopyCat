@@ -1,0 +1,15 @@
+﻿//This is a simple example of how CopyCat Scripts work
+OS=Linux
+//Note: That since exec_wait is specified, the script will halt until Notepad is closed
+//You can use this to have copy cat wait for a process that produces a file to complete (I.E. install creation script)
+
+exec_wait(sleep 5)
+
+//This is an example of setting a variable
+//Additionally we're using a wildcard for current date/time #yyyy-MM-dd#
+ExampleOutputVar=/debug/B/#yyyy-MM-dd#
+
+//This is an example of using a variable
+/debug/A => %ExampleOutputVar%
+exec(sleep 10)
+
