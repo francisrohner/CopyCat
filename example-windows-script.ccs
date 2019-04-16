@@ -1,0 +1,7 @@
+﻿//This is a simple example of how CopyCat Scripts work
+OS=Windows
+//Note: That since exec_wait is specified, the script will halt until Notepad is closed
+//You can use this to have copy cat wait for a process that produces a file to complete (I.E. install creation script)
+exec_wait=notepad CloseMe
+C:\Debug\A => C:\Debug\B\#yyyy-MM-dd#
+exec=notepad Finished
