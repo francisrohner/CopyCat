@@ -2,7 +2,7 @@
 OS=Windows
 //Note: That since exec_wait is specified, the script will halt until Notepad is closed
 //You can use this to have copy cat wait for a process that produces a file to complete (I.E. install creation script)
-exec_wait=notepad CloseMe
+exec_wait(notepad CloseMe)
 
 //This is an example of setting a variable
 //Additionally we're using a wildcard for current date/time #yyyy-MM-dd#
@@ -10,4 +10,5 @@ ExampleOutputVar=C:\Debug\B\#yyyy-MM-dd#
 
 //This is an example of using a variable
 C:\Debug\A => %ExampleOutputVar%
-exec=notepad Finished
+exec(notepad Finished)
+
