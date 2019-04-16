@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
@@ -329,6 +330,7 @@ namespace CopyCat
                 {
                     string line = scriptReader.ReadLine();
                     if (line.StartsWith("//")) continue;
+                    if (string.IsNullOrEmpty(line.Trim())) continue;
                     line = _ReplaceDateTimeStr(line);
                     if(line.Contains("=>"))
                     {
@@ -345,14 +347,12 @@ namespace CopyCat
                     else //Tag/Value pair
                     {
                         tag = line.Split('=')[0];
-                        tag = tag.ToLower();
-
                         value = line.Split('=')[1];
-                        if (tag.StartsWith("exec_wait"))
+                        if (tag.ToLower().StartsWith("exec_wait"))
                         {
                             operations.Add(new ExecOperation(value, true));
                         }
-                        else if (tag.StartsWith("exec"))
+                        else if (tag.ToLower().StartsWith("exec"))
                         {
                             operations.Add(new ExecOperation(value));
                         }
@@ -365,10 +365,15 @@ namespace CopyCat
                 scriptReader.Close();
 
                 //Process variables
-                if(variables.ContainsKey("os"))
-                {
-                    _os = variables["os"];
-                }
+                _os = _ValueFromDict(variables, "os");
+            }
+
+            private string _ValueFromDict(Dictionary<string, string> dict, string key)
+            {
+                foreach (string ckey in dict.Keys)
+                    if (ckey.ToLowerInvariant().Equals(key))
+                        return dict[ckey];
+                return null;
             }
             public int Execute()
             {
@@ -378,6 +383,7 @@ namespace CopyCat
                 int success_count = 0;
                 for(int i = 0; i < operations.Count; i++)
                 {
+                    operations[i].Resolve(variables); //resolve variables
                     if(operations[i].Execute() > 0)
                     {
                         ++success_count;
