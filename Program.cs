@@ -6,13 +6,14 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace CopyCat
 {
     public class Program
     {
 
-        enum ERROR_CODES
+        public enum ERROR_CODES
         {
             SOURCE_NOT_FOUND = -806,
             OS_MISMATCH = -805,
@@ -30,34 +31,34 @@ namespace CopyCat
             SUCCESS = 1,
         }
 
-        public static char file_separator;
-        public static bool overwrite_mode = true;
+        public static char FileSeparator;
+        public static bool OverwriteMode = true;
 
-
-        public interface Operation
+        public interface IOperation
         {
-            int Execute();
+            ERROR_CODES Execute();
             string GetDesc();
         }
-        public class CopyOperation : Operation
+
+        public class CopyOperation : IOperation
         {
-            private string _source;
-            private string _destination;
+            public string Source { get; set; }
+            public string Destination { get; private set; }
             public CopyOperation(string source, string destination)
             {
-                _source = source;
-                _destination = destination;
+                Source = source;
+                Destination = destination;
             }
 
             public string GetDesc()
             {
-                if (Directory.Exists(_source))
+                if (Directory.Exists(Source))
                 {
-                    return "CopyDirectory, " + _source + " => " + _destination;
+                    return "CopyDirectory, " + Source + " => " + Destination;
                 }
                 else
                 {
-                    return "CopyFile, " + _source + " => " + _destination;
+                    return "CopyFile, " + Source + " => " + Destination;
                 }
             }
             /// <summary>
@@ -65,24 +66,24 @@ namespace CopyCat
             /// </summary>
             /// <param name="filePath"></param>
             /// <returns></returns>
-            private string _GetFileName(string filePath)
+            private string GetFileName(string filePath)
             {
-                if (filePath.Contains(file_separator))
-                    return filePath.Substring(filePath.LastIndexOf(file_separator) + 1);
+                if (filePath.Contains(FileSeparator))
+                    return filePath.Substring(filePath.LastIndexOf(FileSeparator) + 1);
                 return filePath;
             }
 
             //Ref: https://docs.microsoft.com/en-us/dotnet/api/system.io.directoryinfo?redirectedfrom=MSDN&view=netframework-4.7.2
             /// <summary>
-            /// Copy a directory and all it's subdirectories to specified destination
+            /// Copy a directory and all it's subdirectories to specified destionation
             /// </summary>
             /// <param name="source"></param>
             /// <param name="destination"></param>
-            private void _CopyDirectory(string source, string destination)
+            private void CopyDirectory(string source, string destination)
             {
                 DirectoryInfo sourceDirInfo = new DirectoryInfo(source);
                 DirectoryInfo destDirInfo = new DirectoryInfo(destination);
-                _CopyAll(sourceDirInfo, destDirInfo);
+                CopyAll(sourceDirInfo, destDirInfo);
             }
 
             //Ref: https://docs.microsoft.com/en-us/dotnet/api/system.io.directoryinfo?redirectedfrom=MSDN&view=netframework-4.7.2
@@ -91,49 +92,47 @@ namespace CopyCat
             /// </summary>
             /// <param name="source"></param>
             /// <param name="destination"></param>
-            private void _CopyAll(DirectoryInfo source, DirectoryInfo destination)
+            private void CopyAll(DirectoryInfo source, DirectoryInfo destination)
             {
                 Directory.CreateDirectory(destination.FullName);
 
                 // Copy each file into the new directory.
-                foreach (FileInfo fi in source.GetFiles())
+                foreach (FileInfo fileInfo in source.GetFiles())
                 {
-                    //Console.WriteLine(@"Copying {0}\{1}", target.FullName, fi.Name);
-                    fi.CopyTo(Path.Combine(destination.FullName, fi.Name), true);
+                    fileInfo.CopyTo(Path.Combine(destination.FullName, fileInfo.Name), true);
                 }
 
-                // Copy each subdirectory using recursion.
+                // Copy every sub directory recursively.
                 foreach (DirectoryInfo di in source.GetDirectories())
                 {
                     DirectoryInfo nextSubDirInfo = destination.CreateSubdirectory(di.Name);
-                    _CopyAll(di, nextSubDirInfo);
+                    CopyAll(di, nextSubDirInfo);
                 }
             }
             /// <summary>
             /// Copy source file or folder to destination
             /// </summary>
             /// <returns></returns>
-            public int Execute()
+            public ERROR_CODES Execute()
             {
-                int ret;
-                if (File.Exists(_source))
+                if (File.Exists(Source))
                 {
                     //File operation
-                    if (Directory.Exists(_destination)) //Operation entails copying file to a directory
+                    if (Directory.Exists(Destination)) //IOperation entails copying file to a directory
                     {
-                        File.Copy(_source, _destination + file_separator + _GetFileName(_source), overwrite_mode);
+                        File.Copy(Source, Destination + FileSeparator + GetFileName(Source), OverwriteMode);
                     }
                     else //No directory found, destination is file name
                     {
                         try
                         {
-                            if (File.Exists(_source))
+                            if (File.Exists(Source))
                             {
-                                File.Copy(_source, _destination, overwrite_mode);
+                                File.Copy(Source, Destination, OverwriteMode);
                             }
                             else
                             {
-                                return (int)ERROR_CODES.FILE_NOT_FOUND;
+                                return ERROR_CODES.FILE_NOT_FOUND;
                             }
                         }
                         catch (Exception ex)
@@ -142,11 +141,11 @@ namespace CopyCat
                         }
                     }
                 }
-                else if (Directory.Exists(_source))
+                else if (Directory.Exists(Source))
                 {
                     try
                     {
-                        _CopyDirectory(_source, _destination);
+                        CopyDirectory(Source, Destination);
                     }
                     catch (Exception ex)
                     {
@@ -155,22 +154,21 @@ namespace CopyCat
                 }
                 else
                 {
-                    ret = (int)ERROR_CODES.SOURCE_NOT_FOUND;
+                    return ERROR_CODES.SOURCE_NOT_FOUND;
                 }
-                ret = (int)ERROR_CODES.SUCCESS;
-                return ret;
+                return ERROR_CODES.SUCCESS;
             }
         }
-        public class DownloadOperation : Operation
+        public class DownloadOperation : IOperation
         {
 
-            private string _url;
-            private string _localFile;
+            private string Url { get; }
+            private string LocalFile { get; }
 
             public DownloadOperation(string url, string localFile)
             {
-                _url = url;
-                _localFile = localFile;
+                Url = url;
+                LocalFile = localFile;
             }
 
             /// <summary>
@@ -180,13 +178,12 @@ namespace CopyCat
             /// </summary>
             /// <param name="data"></param>
             /// <returns></returns>
-            private int _PerformDownload(out byte[] data)
+            private ERROR_CODES PerformDownload(out byte[] data)
             {
-                int ret = (int)ERROR_CODES.FAILED;
                 data = null;
                 try
                 {
-                    HttpWebRequest htreq = (HttpWebRequest)WebRequest.Create(_url);
+                    HttpWebRequest htreq = (HttpWebRequest)WebRequest.Create(Url);
                     HttpWebResponse htresp = (HttpWebResponse)htreq.GetResponse();
                     MemoryStream ms = new MemoryStream();
                     Stream stream = htresp.GetResponseStream();
@@ -194,28 +191,28 @@ namespace CopyCat
                     stream.Close();
                     ms.Close();
                     data = ms.ToArray();
-                    ret = (int)ERROR_CODES.SUCCESS;
+                    return ERROR_CODES.SUCCESS;
                 }
-                catch (WebException wex)
+                //Todo work into ExceptionToErrCode
+                //catch (WebException wex)
+                //{
+                //    HttpWebResponse err_resp = wex.Response as HttpWebResponse;
+                //    ret = ((int)err_resp.StatusCode) * -1; //Ex: 404 => -404
+                //}
+                catch(Exception ex)
                 {
-                    HttpWebResponse err_resp = wex.Response as HttpWebResponse;
-                    ret = ((int)err_resp.StatusCode) * -1; //Ex: 404 => -404
+                    return ExceptionToErrCode(ex);
                 }
-                catch
-                {
-                    ret = (int)ERROR_CODES.FAILED;
-                }
-                return ret;
             }
-            public int Execute()
+            public ERROR_CODES Execute()
             {
                 //Download("http://xyz.com/resouce.txt", "C:\Users\XYZ\resource.txt")
                 byte[] rx;
-                int ret = _PerformDownload(out rx);
+                ERROR_CODES ret = PerformDownload(out rx);
                 if (ret > 0)
                 {
                     //save file
-                    File.WriteAllBytes(_localFile, rx);
+                    File.WriteAllBytes(LocalFile, rx);
                     return ret;
                 }
                 return ret;
@@ -223,24 +220,24 @@ namespace CopyCat
 
             public string GetDesc()
             {
-                return "Download," + _url + " => " + _localFile;
+                return "Download," + Url + " => " + LocalFile;
             }
 
         }
-        public class ExecOperation : Operation
+        public class ExecOperation : IOperation
         {
-            private bool _wait;
-            private string _exec_str;
+            private bool Wait { get; }
+            private string ExecStr { get; }
 
             public string GetDesc()
             {
-                if (_wait)
+                if (Wait)
                 {
-                    return "ExecWait, " + _exec_str;
+                    return "ExecWait, " + ExecStr;
                 }
                 else
                 {
-                    return "Exec, " + _exec_str;
+                    return "Exec, " + ExecStr;
                 }
             }
 
@@ -248,54 +245,53 @@ namespace CopyCat
             /// Break apart string containing path to executable and various arguments
             /// Ex: "C:\Program Files (x86)\SomePath\SomeProgram.exe" --someTag someValue
             /// </summary>
-            /// <param name="exec_str"></param>
+            /// <param name="value"></param>
             /// <returns></returns>
-            private string[] _spl_with_quotations(string exec_str)
+            private string[] SplitWithQuotations(string value)
             {
-                bool encl = false;
+                bool enclosed = false;
                 List<string> args = new List<string>();
-                string curr_str = string.Empty;
-                for(int i = 0; i < exec_str.Length; i++)
+                StringBuilder buffer = new StringBuilder();
+                foreach (char current in value)
                 {
-                    char cur_char = exec_str[i];
-                    if (cur_char == '"')
+                    if (current == 34) //34 - "
                     {
-                        encl = !encl;
+                        enclosed = !enclosed;
                     }
-                    else if(cur_char == ' ')
+                    else if(current == ' ')
                     {
-                        if(!encl)
+                        if(!enclosed)
                         {
-                            args.Add(curr_str);
-                            curr_str = string.Empty;
+                            args.Add(buffer.ToString());
+                            buffer.Length = 0;
                         }
                         else
                         {
-                            curr_str += cur_char;
+                            buffer.Append(current);
                         }
                     }
                     else
                     {
-                        curr_str += cur_char;
+                        buffer.Append(current);
                     }
                 }
-                if(!string.IsNullOrEmpty(curr_str))
+                if(buffer.Length > 0)
                 {
-                    args.Add(curr_str);
+                    args.Add(buffer.ToString());
                 }
                 return args.ToArray();
             }
 
             /// <summary>
-            /// Concatinate string array with spaces starting from specified start index
+            /// Concatenate string array with spaces starting from specified start index
             /// </summary>
             /// <param name="args"></param>
-            /// <param name="start_index"></param>
+            /// <param name="startIndex"></param>
             /// <returns></returns>
-            private string _concatinate_from(string[] args, int start_index)
+            private string ConcatenateFrom(string[] args, int startIndex)
             {
                 string ret = string.Empty;
-                for(int i = start_index; i < args.Length; i++)
+                for(int i = startIndex; i < args.Length; i++)
                 {
                     ret += args[i] + " ";
                 }
@@ -303,29 +299,29 @@ namespace CopyCat
                 return ret;
             }
         
-            public ExecOperation(string exec_str)
+            public ExecOperation(string execStr)
             {
-                _exec_str = exec_str;
-                _wait = false;
+                ExecStr = execStr;
+                Wait = false;
             }
-            public ExecOperation(string exec_str, bool wait)
+            public ExecOperation(string execStr, bool wait)
             {
-                _exec_str = exec_str;
-                _wait = wait;
+                ExecStr = execStr;
+                Wait = wait;
             }
 
             /// <summary>
             /// Execute process without waiting for its completion
             /// </summary>
-            /// <param name="exec_str"></param>
-            private Process _Exec(string exec_str)
+            /// <param name="value"></param>
+            private Process Exec(string value)
             {
                 ProcessStartInfo psi = new ProcessStartInfo();
-                string[] arr = _spl_with_quotations(exec_str);
+                string[] arr = SplitWithQuotations(value);
                 psi.FileName = arr[0];
                 if (arr.Length > 1)
                 {
-                    psi.Arguments = _concatinate_from(arr, 1);
+                    psi.Arguments = ConcatenateFrom(arr, 1);
                 }
                 return Process.Start(psi);
             }
@@ -333,30 +329,29 @@ namespace CopyCat
             /// <summary>
             /// Execute process and wait for its completion
             /// </summary>
-            /// <param name="exec_str"></param>
-            private void _ExecWait(string exec_str)
+            /// <param name="value"></param>
+            private void ExecWait(string value)
             {
-                _Exec(exec_str).WaitForExit();
+                Exec(value).WaitForExit();
             }
 
-            public int Execute()
+            public ERROR_CODES Execute()
             {
                 try
                 {
-                    if (_wait)
+                    if (Wait)
                     {
-                        _ExecWait(_exec_str);
+                        ExecWait(ExecStr);
                     }
                     else
                     {
-                        _Exec(_exec_str);
+                        Exec(ExecStr);
                     }
-
-                    return (int)ERROR_CODES.SUCCESS;
+                    return ERROR_CODES.SUCCESS;
                 }
                 catch (Exception ex)
                 {
-                    return Program.ExceptionToErrCode(ex);
+                    return ExceptionToErrCode(ex);
                 }
             }
         }
@@ -364,21 +359,22 @@ namespace CopyCat
 
         public class CopyCatScript
         {
-            private Dictionary<string, string> variables = new Dictionary<string, string>();
-            List<Operation> operations = new List<Operation>();
-            private string _os;
+            private Dictionary<string, string> Variables { get; } = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+            List<IOperation> Operations { get; } = new List<IOperation>();
+            private string OperatingSystem { get; }
 
-            public bool IsForOS(string os)
+            public bool CheckOSMatch(string os)
             {
-                if (_os == null || os == null) return true; //Unable to compare
-                return _os.ToLower().Equals(os.ToLower());
+                if (OperatingSystem == null || os == null) return true; //Unable to compare
+                return OperatingSystem.ToLower().Equals(os.ToLower());
             }
+
             /// <summary>
             /// Replace Date/Time wildcards with current date time Ex: #YYYY# => 2019
             /// </summary>
             /// <param name="value"></param>
             /// <returns></returns>
-            private static string _ReplaceDateTimeStr(string value)
+            private static string ReplaceDateTimeStr(string value)
             {
                 string ret = string.Empty;
                 if (value.Contains("#"))
@@ -395,8 +391,8 @@ namespace CopyCat
                             else
                             {
                                 //Process
-                                string dt_format = value.Substring(start + 1, (i - 1) - start);
-                                ret += DateTime.Now.ToString(dt_format);
+                                string dateTimeFormat = value.Substring(start + 1, (i - 1) - start);
+                                ret += DateTime.Now.ToString(dateTimeFormat);
                             }
                         }
                         else if (start != -1)
@@ -415,59 +411,60 @@ namespace CopyCat
                     return value;
                 }
             }
+
             public CopyCatScript(string filePath)
             {
                 StreamReader scriptReader = new StreamReader(filePath);
-                List<string> _intermediate = new List<string>();
+                List<string> intermediate = new List<string>();
                 while (!scriptReader.EndOfStream)
                 {
                     string line = scriptReader.ReadLine();
                     if (line.StartsWith("//")) continue; //skip comment line
                     if (string.IsNullOrEmpty(line.Trim())) continue; //skip blank line
-                    line = _ReplaceDateTimeStr(line);
+                    line = ReplaceDateTimeStr(line);
                     if (line.Contains("=") && !(line.Contains("=>") || line.Contains("<="))) //variable
                     {
                         string tag, val;
                         tag = line.Split('=')[0].Trim();
                         val = line.Split('=')[1].Trim();
-                        variables.Add(tag, val);
+                        Variables.Add(tag, val);
                     }
                     else
                     {
-                        _intermediate.Add(line);
+                        intermediate.Add(line);
                     }
                 }
                 scriptReader.Close();
 
                 //Second Pass
-                //Process variables
-                _os = _ValueFromDict(variables, "os");
-                foreach (string line in _intermediate)
+                //Process Variables
+                OperatingSystem = Variables["os"];
+                foreach (string line in intermediate)
                 {
-                    string fline = line;
+                    string cline = (string)line.Clone();
                     //First replace vars
-                    foreach (string tag in variables.Keys)
+                    foreach (string tag in Variables.Keys)
                     {
                         string var = "%" + tag + "%";
-                        if (fline.Contains(var))
+                        if (cline.Contains(var))
                         {
-                            fline = line.Replace(var, variables[tag]);
+                            cline = line.Replace(var, Variables[tag]);
                         }
                     }
-                    operations.Add(_OperationFromLine(fline));
+                    Operations.Add(OperationFromLine(cline));
                 }
 
 
             }
 
             /// <summary>
-            /// Parse a line of the script and return the corresponding Operation
+            /// Parse a line of the script and return the corresponding IOperation
             /// </summary>
             /// <param name="line"></param>
             /// <returns></returns>
-            private Operation _OperationFromLine(string line)
+            private IOperation OperationFromLine(string line)
             {
-                Operation ret = null;
+                IOperation ret = null;
                 string source, destination;
                 string tag, value;
                 if (line.Contains("=>"))
@@ -498,40 +495,27 @@ namespace CopyCat
                 return ret;
             }
 
-            /// <summary>
-            /// Get value from dictionary with key specified (case-insensitive)
-            /// </summary>
-            /// <param name="dict"></param>
-            /// <param name="key"></param>
-            /// <returns></returns>
-            private string _ValueFromDict(Dictionary<string, string> dict, string key)
+            public ERROR_CODES Execute()
             {
-                foreach (string ckey in dict.Keys)
-                    if (ckey.ToLowerInvariant().Equals(key))
-                        return dict[ckey];
-                return null;
-            }
-            public int Execute()
-            {
-                //If script is not intender for current operating system, return OS mismatch
-                if (!IsForOS(Program.GetOS_Str()))
-                    return (int)ERROR_CODES.OS_MISMATCH;
+                //If script is not intended for current operating system, return OS mismatch
+                if (!CheckOSMatch(Program.GetOS_Str()))
+                    return ERROR_CODES.OS_MISMATCH;
 
-                int success_count = 0;
-                for (int i = 0; i < operations.Count; i++)
+                int successCount = 0;
+                foreach (var operation in Operations)
                 {
-                    int ec = operations[i].Execute();
+                    ERROR_CODES ec = operation.Execute();
                     if (ec > 0)
                     {
-                        ++success_count;
-                        _WriteSuccess(operations[i].GetDesc() + " Succeeded");
+                        ++successCount;
+                        WriteSuccess(operation.GetDesc() + " Succeeded");
                     }
                     else
                     {
-                        _WriteError(operations[i].GetDesc() + " Failed: [" + (ERROR_CODES)ec + "]");
+                        WriteError(operation.GetDesc() + " Failed: [" + ec + "]");
                     }
                 }
-                return (success_count == operations.Count) ? (int)ERROR_CODES.SUCCESS : (int)ERROR_CODES.FAILED;
+                return (successCount == Operations.Count) ? ERROR_CODES.SUCCESS : ERROR_CODES.FAILED;
             }
         }
 
@@ -555,15 +539,15 @@ namespace CopyCat
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                file_separator = '/';
+                FileSeparator = '/';
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                file_separator = '\\';
+                FileSeparator = '\\';
             }
             else
             {
-                _WriteError("CopyCat is unsupported on your operating system :(");
+                WriteError("CopyCat is unsupported on your operating system :(");
             }
 
             _PrintEnclosed("CopyCat", '=', ConsoleColor.White);
@@ -582,9 +566,9 @@ namespace CopyCat
             foreach (int key in scripts.Keys)
             {
                 string short_file = scripts[key];
-                if (short_file.Contains(file_separator))
+                if (short_file.Contains(FileSeparator))
                 {
-                    short_file = short_file.Substring(short_file.LastIndexOf(file_separator) + 1);
+                    short_file = short_file.Substring(short_file.LastIndexOf(FileSeparator) + 1);
                 }
                 Console.WriteLine("{0} - {1}", key, short_file);
             }
@@ -593,7 +577,7 @@ namespace CopyCat
             string script = _GetSelectedScript(scripts, user_input);
             if (script == null)
             {
-                _WriteError("Please enter a valid number or script name...");
+                WriteError("Please enter a valid number or script name...");
             }
             else
             {
@@ -617,7 +601,7 @@ namespace CopyCat
             Dictionary<int, string> ret = new Dictionary<int, string>();
             int index = 0;
             string copyCatPath = Assembly.GetExecutingAssembly().Location;
-            copyCatPath = copyCatPath.Substring(0, copyCatPath.LastIndexOf(file_separator));
+            copyCatPath = copyCatPath.Substring(0, copyCatPath.LastIndexOf(FileSeparator));
             foreach (string file in Directory.GetFiles(copyCatPath, "*.ccs"))
             {
                 ret.Add(index++, file);
@@ -659,24 +643,24 @@ namespace CopyCat
         /// </summary>
         /// <param name="ex"></param>
         /// <returns></returns>
-        public static int ExceptionToErrCode(Exception ex)
+        public static ERROR_CODES ExceptionToErrCode(Exception ex)
         {
-            int ret;
+            ERROR_CODES ret = ERROR_CODES.FAILED;
             if (ex is UnauthorizedAccessException)
             {
-                ret = (int)ERROR_CODES.UNAUTHORIZED_EXCEPTION;
+                ret = ERROR_CODES.UNAUTHORIZED_EXCEPTION;
             }
             else if (ex is DirectoryNotFoundException)
             {
-                ret = (int)ERROR_CODES.DIRECTORY_NOT_FOUND;
+                ret = ERROR_CODES.DIRECTORY_NOT_FOUND;
             }
             else if (ex is FileNotFoundException)
             {
-                ret = (int)ERROR_CODES.FILE_NOT_FOUND;
+                ret = ERROR_CODES.FILE_NOT_FOUND;
             }
             else //General
             {
-                ret = (int)ERROR_CODES.FAILED;
+                ret = ERROR_CODES.FAILED;
             }
             return ret;
         }
@@ -733,7 +717,7 @@ namespace CopyCat
             {
                 reader.ReadLine(); //Skip credit line
                 string result = reader.ReadToEnd();
-                _WriteSuccess(result);
+                WriteSuccess(result);
             }
         }
 
@@ -752,7 +736,7 @@ namespace CopyCat
         /// Print success string to console with red foreground
         /// </summary>
         /// <param name="success_str"></param>
-        public static void _WriteSuccess(string success_str)
+        public static void WriteSuccess(string success_str)
         {
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine(success_str);
@@ -774,7 +758,7 @@ namespace CopyCat
         /// Print error string to console with red foreground
         /// </summary>
         /// <param name="err_str"></param>
-        public static void _WriteError(string err_str)
+        public static void WriteError(string err_str)
         {
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine(err_str);
