@@ -1,14 +1,15 @@
 ﻿//This is a simple example of how CopyCat Scripts work
-OS=Windows
+SetVar OS=Windows
 //Note: That since exec_wait is specified, the script will halt until Notepad is closed
 //You can use this to have copy cat wait for a process that produces a file to complete (I.E. install creation script)
-exec_wait(notepad CloseMe)
+ExecWait notepad CloseMe
 
 //This is an example of setting a variable
 //Additionally we're using a wildcard for current date/time #yyyy-MM-dd#
-ExampleOutputVar=C:\Debug\B\#yyyy-MM-dd#
+SetVar ExampleOutputVar=C:\Debug\B\#yyyy-MM-dd#
 
 //This is an example of using a variable
-C:\Debug\A => %ExampleOutputVar%
-exec(notepad Finished)
+Copy C:\Debug\A => %ExampleOutputVar%
+Exec notepad Finished
 
+Download https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/%C3%81guila_calva.jpg/1280px-%C3%81guila_calva.jpg C:\Tmp\eagle.jpg
