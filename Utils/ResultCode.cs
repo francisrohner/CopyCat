@@ -7,6 +7,8 @@ namespace CopyCat.Utils
     public enum ResultCode
     {
         //Error range
+        LABEL_DUPLICATE = -405,
+        LABEL_NOT_FOUND = -404,
         SOURCE_NOT_FOUND = -100,
         OS_MISMATCH,
         DIRECTORY_NOT_FOUND,

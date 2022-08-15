@@ -16,11 +16,11 @@ namespace CopyCat.Operations
         }
         public override ResultCode Execute()
         {
-            string line = Raw.TrimStart().Substring("setvar".Length);
+            string line = Line.TrimStart().Substring("setvar".Length);
             string[] segments = line.Trim().Split('=');
             string tag = segments[0].Trim();
             string value = segments[1];
-            Script.Variables[tag] = value;
+            Script.SetVariable(tag, value);
 
             //Special var
             if (tag.Equals("os", StringComparison.InvariantCultureIgnoreCase))

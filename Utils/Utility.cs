@@ -164,44 +164,57 @@ namespace CopyCat.Utils
         /// Print info string to console with white foreground
         /// </summary>
         /// <param name="output"></param>
-        public static void WriteInfo(string output)
+        public static void WriteInfo(string output, bool excludeConsole = false)
         {
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine(output);
-            Console.ResetColor();
+            if (!excludeConsole)
+            {
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.WriteLine(output);
+                Console.ResetColor();
+            }
         }
 
         /// <summary>
         /// Print success string to console with red foreground
         /// </summary>
         /// <param name="output"></param>
-        public static void WriteSuccess(string output)
+        public static void WriteSuccess(string output, bool excludeConsole = false)
         {
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine(output);
-            Console.ResetColor();
+            if (!excludeConsole)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine(output);
+                Console.ResetColor();
+            }
         }
 
         /// <summary>
         /// Print warning string to console with yellow foreground
         /// </summary>
         /// <param name="output"></param>
-        public static void WriteWarning(string output)
+        public static void WriteWarning(string output, bool excludeConsole = false)
         {
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine(output);
-            Console.ResetColor();
+            if(!excludeConsole)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine(output);
+                Console.ResetColor();
+            }
+
         }
 
         /// <summary>
         /// Print error string to console with red foreground
         /// </summary>
         /// <param name="output"></param>
-        public static void WriteError(string output)
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine(output);
-            Console.ResetColor();
+        public static void WriteError(string output, bool excludeConsole = false)
+        { 
+            if (!excludeConsole)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine(output);
+                Console.ResetColor();
+            }
         }
         #endregion ConsoleFunctions
     }

@@ -69,10 +69,10 @@ namespace CopyCat
                 }
 
             }
-            if (Debugger.IsAttached)
-            {
-                Utility.WaitKey("Exit", ConsoleColor.White);
-            }
+            //if (Debugger.IsAttached)
+            //{
+            //    Utility.WaitKey("Exit", ConsoleColor.White);
+            //}
 
         }
 

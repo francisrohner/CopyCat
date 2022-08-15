@@ -14,10 +14,27 @@ namespace CopyCat.Parser
 
     public class CopyCatScript
     {
-        public Dictionary<string, string> Variables { get; } = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
-        //List<BaseOperation> Operations { get; } = new List<BaseOperation>();
-        public string OperatingSystem { get; set; }
-        public string FilePath { get; }
+        private Dictionary<string, int> Labels { get; } = new Dictionary<string, int>(StringComparer.InvariantCultureIgnoreCase);
+        private Dictionary<string, string> Variables { get; } = new Dictionary<string, string>(StringComparer.InvariantCultureIgnoreCase);
+        private string OperatingSystem { get; set; }
+        private string FilePath { get; }
+        private List<BaseOperation> Operations { get; set; }
+        private int ExecutionIndex { get; set; }
+
+        public string GetVariableStr(string key) => Variables.TryGetValue(key, out string value) ? value : string.Empty;
+
+        public bool SetLabelLineNo(string label, int lineNumber)
+        {
+            if(Labels.ContainsKey(label))
+            {
+                return false;
+            }
+            Labels[label] = lineNumber;
+            return true;
+        }
+        public int GetLabelLineNo(string label) => Labels.TryGetValue(label, out int index) ? index : -1;
+
+        public void SetVariable(string key, string value) => Variables[key] = value;
 
         public bool CheckOSMatch(string os)
         {
@@ -30,7 +47,7 @@ namespace CopyCat.Parser
         /// </summary>
         /// <param name="value"></param>
         /// <returns></returns>
-        private static string ReplaceDateTimeStr(string value)
+        public string ReplaceDateTimeStr(string value)
         {
 
             StringBuilder ret = new StringBuilder();
@@ -82,7 +99,7 @@ namespace CopyCat.Parser
             FilePath = filePath;
         }
 
-        private string ReplaceVariables(string line)
+        public string ReplaceVariables(string line)
         {
             string cline = (string)line.Clone();
             foreach (string tag in Variables.Keys)
@@ -96,72 +113,97 @@ namespace CopyCat.Parser
             return cline;
         }
 
+        public void JumpToLine(int lineNo)
+        {
+            ExecutionIndex = lineNo;
+        }
+
+        public (bool Success, List<BaseOperation> Operations) ParseScript()
+        {
+            if (!File.Exists(FilePath))
+            {
+                return (false, null);
+            }
+            List<BaseOperation> operations = new List<BaseOperation>();
+
+            int lineNumber = 0;
+            using (StreamReader scriptReader = new StreamReader(FilePath))
+            {
+                while (!scriptReader.EndOfStream)
+                {
+                    string line = scriptReader.ReadLine().Trim();
+                    if (line == null || line.StartsWith("//") || string.IsNullOrEmpty(line.Trim()))
+                    {
+                        continue; //comment, or other negligble line
+                    }
+
+                    //line = ReplaceDateTimeStr(line);
+                    //line = ReplaceVariables(line);
+                    var operation = BaseOperation.InstantiateOperation(lineNumber++, this, line);
+                    if (operation == null)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"Unrecognized command: {line}");
+                        Console.ResetColor();
+                        continue; //invalid op
+                    }
+                    operations.Add(operation);
+                }
+            }
+
+            return (true, operations);
+
+        }
+
         public ResultCode Execute()
         {
             if (!File.Exists(FilePath))
             {
                 return ResultCode.FILE_NOT_FOUND;
             }
+
+            var result = ParseScript();
+            Operations = result.Operations;
+
             int successCount = 0;
-            int totalOperations = 0;
-
-            //Note: This interpet/execute on the fly view may make logical eval and jump ops harder
-            int lineNumber = 0;
-            using (StreamReader scriptReader = new StreamReader(FilePath))
+            int count = Operations.Count();
+            for (int i = 0; i < count; i++)
             {
-                //Pass 1 -- Read script, decipher variables
-                while (!scriptReader.EndOfStream)
+                var operation = Operations[i];
+                ResultCode ec;
+                try
                 {
-                    string line = scriptReader.ReadLine();
-                    ++lineNumber;
-
-                    if (line == null || line.StartsWith("//") || string.IsNullOrEmpty(line.Trim()))
+                    operation.InterpretVariables();
+                    ec = operation.Execute();
+                }
+                catch (Exception ex)
+                {
+                    ec = Utility.ExceptionToErrCode(ex);
+                    if (Variables.TryGetValue("exit_on_error", out string exitOnErr) &&
+                        exitOnErr.Equals("true", StringComparison.InvariantCultureIgnoreCase))
                     {
-                        continue;
-                    }
-
-                    line = ReplaceDateTimeStr(line);
-                    line = ReplaceVariables(line);
-                    var operation = BaseOperation.InstantiateOperation(lineNumber, this, line);
-                    if (operation == null)
-                    {
-                        continue; //invalid op
-                    }
-                    ++totalOperations;
-
-                    ResultCode ec = ResultCode.FAILED;
-                    try
-                    {
-                        ec = operation.Execute();
-                    }
-                    catch (Exception ex)
-                    {
-                        ec = Utility.ExceptionToErrCode(ex);
-                        if (Variables.TryGetValue("exit_on_error", out string exitOnErr) &&
-                            exitOnErr.Equals("true", StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            break;
-                        }
-                    }
-
-                    if (ec == ResultCode.EXIT_REQUESTED)
-                    {
-                        return ec; //early abort
-                    }
-
-                    if (ec > 0)
-                    {
-                        ++successCount;
-                        Utility.WriteSuccess($"{operation} Succeeded");
-                    }
-                    else
-                    {
-                        Utility.WriteError($"{operation} Failed: [{ec}]");
+                        break;
                     }
                 }
+
+                if (ec == ResultCode.EXIT_REQUESTED)
+                {
+                    return ec; //early abort
+                }
+
+                if (ec > 0)
+                {
+                    ++successCount;
+                    Utility.WriteSuccess($"{operation} Succeeded", !operation.PrintResultMessage);
+                }
+                else
+                {
+                    Utility.WriteError($"{operation} Failed: [{ec}]", !operation.PrintResultMessage);
+                }
+
             }
 
-            return (successCount == totalOperations) ? ResultCode.SUCCESS : ResultCode.FAILED;
+            return (successCount == count) ? ResultCode.SUCCESS : ResultCode.FAILED;
         }
 
 
