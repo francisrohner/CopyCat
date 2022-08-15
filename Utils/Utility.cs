@@ -168,6 +168,7 @@ namespace CopyCat.Utils
         {
             if (!excludeConsole)
             {
+                Console.BackgroundColor = ConsoleColor.Black;
                 Console.ForegroundColor = ConsoleColor.White;
                 Console.WriteLine(output);
                 Console.ResetColor();

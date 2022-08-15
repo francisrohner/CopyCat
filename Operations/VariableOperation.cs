@@ -14,7 +14,7 @@ namespace CopyCat.Operations
         {
 
         }
-        public override ResultCode Execute()
+        public override ResultCode ScriptLoadTimeExecute()
         {
             string line = Line.TrimStart().Substring("setvar".Length);
             string[] segments = line.Trim().Split('=');
@@ -30,6 +30,11 @@ namespace CopyCat.Operations
                     return ResultCode.OS_MISMATCH;
                 }
             }
+            return ResultCode.SUCCESS;
+        }
+
+        public override ResultCode Execute()
+        {
             return ResultCode.SUCCESS;
         }
     }

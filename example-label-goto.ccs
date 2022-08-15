@@ -1,3 +1,4 @@
-﻿PRINTLN:RED Test1
-
-PRINTLN:GREEN Test2
+﻿PRINTLN:GREEN Should see this
+GOTO EXIT
+PRINTLN:RED Shouldn't see this
+:EXIT

@@ -20,6 +20,7 @@ namespace CopyCat.Parser
         private string FilePath { get; }
         private List<BaseOperation> Operations { get; set; }
         private int ExecutionIndex { get; set; }
+        public int ErrorCount { get; private set; }
 
         public string GetVariableStr(string key) => Variables.TryGetValue(key, out string value) ? value : string.Empty;
 
@@ -94,7 +95,7 @@ namespace CopyCat.Parser
             return new CopyCatScript(filePath).Execute();
         }
 
-        protected CopyCatScript(string filePath)
+        public CopyCatScript(string filePath)
         {
             FilePath = filePath;
         }
@@ -147,6 +148,7 @@ namespace CopyCat.Parser
                         Console.ResetColor();
                         continue; //invalid op
                     }
+                    operation.ScriptLoadTimeExecute(); //TODO handle load time failures
                     operations.Add(operation);
                 }
             }
@@ -165,11 +167,11 @@ namespace CopyCat.Parser
             var result = ParseScript();
             Operations = result.Operations;
 
-            int successCount = 0;
+            ErrorCount = 0;
             int count = Operations.Count();
-            for (int i = 0; i < count; i++)
+            for (ExecutionIndex = 0; ExecutionIndex < count; ExecutionIndex++)
             {
-                var operation = Operations[i];
+                var operation = Operations[ExecutionIndex];
                 ResultCode ec;
                 try
                 {
@@ -193,17 +195,17 @@ namespace CopyCat.Parser
 
                 if (ec > 0)
                 {
-                    ++successCount;
                     Utility.WriteSuccess($"{operation} Succeeded", !operation.PrintResultMessage);
                 }
                 else
                 {
+                    ++ErrorCount;
                     Utility.WriteError($"{operation} Failed: [{ec}]", !operation.PrintResultMessage);
                 }
 
             }
 
-            return (successCount == count) ? ResultCode.SUCCESS : ResultCode.FAILED;
+            return (ErrorCount == 0) ? ResultCode.SUCCESS : ResultCode.FAILED;
         }
 
 

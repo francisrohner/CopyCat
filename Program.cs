@@ -51,21 +51,23 @@ namespace CopyCat
             }
             Console.Write("Enter the name or number of a script: ");
             string userInput = Console.ReadLine();
-            string script = GetSelectedScript(scripts, userInput);
-            if (script == null)
+            string scriptFilePath = GetSelectedScript(scripts, userInput);
+            if (scriptFilePath == null)
             {
                 Utility.WriteError("Please enter a valid number or script name...");
             }
             else
             {
-                var result = CopyCatScript.Execute(script);
+                
+                CopyCatScript script = new CopyCatScript(scriptFilePath);
+                var result = script.Execute(); //CopyCatScript.Execute(script);
                 if(result > 0)
                 {
                     Utility.WriteInfo($"Script finished successfully [{result}]");
                 }
                 else
                 {
-                    Utility.WriteError($"Script finished with one or more errors [{result}]");
+                    Utility.WriteError($"Script finished with {script.ErrorCount} errors [{result}]");
                 }
 
             }

@@ -30,6 +30,7 @@ namespace CopyCat.Operations
             Line = Script.ReplaceVariables(Line);
         }
 
+        public virtual ResultCode ScriptLoadTimeExecute() { return ResultCode.SUCCESS; }
         public abstract ResultCode Execute();
         public override string ToString() => Line;
 
